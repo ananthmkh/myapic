@@ -1,0 +1,143 @@
+swagger: '2.0'
+info:
+  x-ibm-name: simplecalculator
+  title: SimpleCalculator
+  version: 1.0.0
+  contact:
+    name: Amit Pareek
+    email: ampareek@gmail.com
+  description: >-
+    This API showcase demo of a Calculator REST API development using APIC
+    management console. It is having function for Add , Sub, Divide .  Im using
+    if Logic  - If , Operation Switch .
+
+    Im using error , catch block also with map policy .
+schemes:
+  - https
+host: $(catalog.host)
+basePath: /simplecalculator
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  clientIdHeader:
+    type: apiKey
+    in: header
+    name: X-IBM-Client-Id
+security:
+  - clientIdHeader: []
+x-ibm-configuration:
+  assembly:
+    execute:
+      - switch:
+          version: 1.0.0
+          title: switch
+          case:
+            - condition: (request.verb==='GET'&&api.operation.path==='/subtract')
+              execute:
+                - gatewayscript:
+                    version: 1.0.0
+                    title: gatewayscript
+                    source: "//Read incoming Query String\r\n        var queryString = apim.getvariable('reques.querystring');\r\n       apim.setvariable('message.body',queryString,\"set\");"
+            - condition: (request.verb==='POST'&&api.operation.path==='/divide')
+              execute:
+                - proxy:
+                    title: proxy
+                    version: 1.0.0
+                    verb: POST
+                    target-url: $(target-url)/divide
+            - condition: (request.verb==='GET'&&api.operation.path==='/add')
+              execute:
+                - proxy:
+                    title: proxy
+                    version: 1.0.0
+                    verb: GET
+                    target-url: $(target-url)/add
+          otherwise: []
+  properties:
+    target-url:
+      value: 'https://$(catalog.host)/simplecalculator'
+      description: The URL of the target service
+      encoded: false
+  type: rest
+  phase: realized
+  enforced: true
+  testable: true
+  gateway: datapower-gateway
+  cors:
+    enabled: true
+paths:
+  /subtract:
+    get:
+      responses:
+        '200':
+          description: 200 OK
+          schema:
+            $ref: '#/definitions/calculationresponse'
+      parameters:
+        - name: num1
+          type: integer
+          required: false
+          in: query
+          format: int32
+        - name: num2
+          type: integer
+          required: false
+          in: query
+          format: int32
+  /divide:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+        '420':
+          description: 420 Fail
+      parameters:
+        - name: div1
+          type: integer
+          required: false
+          in: query
+          format: int32
+        - name: div2
+          type: integer
+          required: false
+          in: query
+          format: int32
+  /add:
+    get:
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/calculationresponse'
+        '420':
+          description: ''
+          schema:
+            $ref: '#/definitions/error'
+      parameters:
+        - name: number1
+          type: integer
+          required: false
+          in: query
+          format: int32
+        - name: number2
+          type: integer
+          required: false
+          in: query
+          format: int32
+definitions:
+  error:
+    properties:
+      message:
+        type: string
+    additionalProperties: false
+  calculationresponse:
+    properties:
+      result:
+        type: integer
+        format: int32
+    additionalProperties: false
+    required:
+      - result
+tags: []
